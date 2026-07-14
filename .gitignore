@@ -1,0 +1,10 @@
+.env
+notebook.ipynb
+pycache
+.aiexclude
+readme.md
+.idea
+chroma_db
+chromadb
+.venv
+pdf/Annex-A-Detailed-Software-Requirements-Specification-SRS.pdf
