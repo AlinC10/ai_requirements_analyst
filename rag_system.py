@@ -1,6 +1,7 @@
-from langchain_core.messages import AIMessage
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.embeddings import Embeddings
+from langchain_core.messages import AIMessage
+
+import prompts
 from document_processor import DocumentProcessor
 from llm import create_prompt_llm
 from vector_database import VectorDatabase
@@ -19,17 +20,6 @@ class RagSystem:
         4. **Structured and Detailed:** If the information is present, be exhaustive. Use clear headings, bullet points, and paragraphs.
 """
 
-    @staticmethod
-    def get_prompt_template(system_prompt: str, prompt: str) -> ChatPromptTemplate:
-        """Create a ChatPromptTemplate that can be used for every mode."""
-
-        chat_template = ChatPromptTemplate.from_messages([
-            ('system', system_prompt),
-            ('user', prompt)
-        ])
-
-        return chat_template
-
     def get_response(self, system_prompt: str, prompt: str) -> AIMessage:
         """Get response for any question and return it to the specified task."""
 
@@ -39,7 +29,7 @@ class RagSystem:
         # format and join data in a string
         formated_context = DocumentProcessor.format_for_llm(relevant_chunks)
 
-        chat_template = RagSystem.get_prompt_template(system_prompt, prompt)
+        chat_template = prompts.get_prompt_template(system_prompt, prompt)
 
         llm_chain = chat_template | self.llm
 
@@ -61,5 +51,5 @@ class RagSystem:
         response = self.get_response(system_prompt, prompt)
 
         # print response in console for debugging
-        print(response)
+        # print(response)
         return response

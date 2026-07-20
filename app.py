@@ -4,6 +4,7 @@ import tempfile
 import streamlit as st
 from langchain_huggingface import HuggingFaceEmbeddings
 
+import prompts
 from document_processor import DocumentProcessor
 from rag_system import RagSystem
 from vector_database import VectorDatabase
@@ -116,7 +117,11 @@ if user_submition := st.chat_input(
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            response = st.session_state.rag.qa_prompt(prompt)
+            command, prompt = prompts.retrieve_command(prompt)
+
+            complementary_system_prompt = prompts.get_specific_system_prompt(command)
+
+            response = st.session_state.rag.get_response(complementary_system_prompt, prompt)
             response = response.content
 
             st.markdown(response)

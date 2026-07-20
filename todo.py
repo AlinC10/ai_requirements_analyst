@@ -17,9 +17,6 @@
 
 # FIXME: remove print() used in the debugging process
 
-# TODO: move data from .env to secrets.toml to upload the page to
-#  Streamlit community
-
 # FIXME: modify rag system logic to delete from Chroma Database collection
 #  files that were deleted from the UI or just ignore them in the
 #  similarity search.
