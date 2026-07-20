@@ -1,6 +1,7 @@
 .env
 notebook.ipynb
 pycache
+__pycache__
 .aiexclude
 readme.md
 .idea
@@ -8,3 +9,4 @@ chroma_db
 chromadb
 .venv
 pdf/Annex-A-Detailed-Software-Requirements-Specification-SRS.pdf
+.streamlit/secrets.toml

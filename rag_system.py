@@ -1,15 +1,15 @@
 from langchain_core.messages import AIMessage
 from langchain_core.prompts import ChatPromptTemplate
-
+from langchain_core.embeddings import Embeddings
 from document_processor import DocumentProcessor
 from llm import create_prompt_llm
 from vector_database import VectorDatabase
 
 
-class Prompts:
-    def __init__(self):
+class RagSystem:
+    def __init__(self, embedding_function: Embeddings):
         self.llm = create_prompt_llm()
-        self.vector_database = VectorDatabase()
+        self.vector_database = VectorDatabase(embedding_function)
 
         self.system_rules = """
         CRITICAL RULES:
@@ -39,7 +39,7 @@ class Prompts:
         # format and join data in a string
         formated_context = DocumentProcessor.format_for_llm(relevant_chunks)
 
-        chat_template = Prompts.get_prompt_template(system_prompt, prompt)
+        chat_template = RagSystem.get_prompt_template(system_prompt, prompt)
 
         llm_chain = chat_template | self.llm
 

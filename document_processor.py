@@ -22,7 +22,7 @@ class DocumentProcessor:
         return splitted_docs
 
     @staticmethod
-    def _check_file_extension(file_path: str):
+    def check_file_extension(file_path: str):
         _, extension = os.path.splitext(file_path)
         extension = extension[1:]
 
@@ -35,8 +35,7 @@ class DocumentProcessor:
 
     @staticmethod
     def _remove_useless_info_from_metadata(docs: list[Document],
-                                           important_metadata_categories: list[str] = ['title', 'author', 'subject',
-                                                                                       'keywords', 'page', 'source']) -> \
+                                           important_metadata_categories: list[str] = default_important_metadata_categories) -> \
             list[Document]:
         """Remove useless information from metadata"""
         for doc in docs:
@@ -57,10 +56,11 @@ class DocumentProcessor:
         return docs
 
     @staticmethod
-    def load_doc(file_path: str, chat_id: str,
+    def load_doc(file_path: str, chat_id: str, file_name: str | None = None,
                  important_metadata_categories: list[str] = default_important_metadata_categories) -> list[Document]:
+
         """Checks file extension"""
-        extension = DocumentProcessor._check_file_extension(file_path)
+        extension = DocumentProcessor.check_file_extension(file_path)
 
         docs = None
         if extension in ['doc', 'docx']:

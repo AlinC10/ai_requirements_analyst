@@ -1,9 +1,9 @@
 from vector_database import VectorDatabase
-from rag_system import Prompts
+from rag_system import RagSystem
 
 # test current features
 db = VectorDatabase()
-pr = Prompts()
+pr = RagSystem()
 
 db.add_documents("pdf/test.pdf")
 
