@@ -1,21 +1,18 @@
-import os
 import time
 
-from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStoreRetriever
+from streamlit import secrets
 
 from document_processor import DocumentProcessor
-
-load_dotenv()
 
 
 class VectorDatabase:
     def __init__(self, embedding_function: Embeddings):
         # Safely gets the env variable, defaults to './chroma_db' if missing
-        self._persistent_directory = os.environ.get("CHROMA_DIR", "./chroma_db")
+        self._persistent_directory = secrets["CHROMA_DIR"] or "./chroma_db"
         self._embeddings_function = embedding_function
         self.collection = self.get_or_create_collection()
         self.dp = DocumentProcessor()
