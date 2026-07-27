@@ -1,0 +1,30 @@
+Smart Library Management System (SLMS) - Requirements Document
+v1.0
+1.0 System Overview
+The Smart Library Management System (SLMS) is a comprehensive web-based
+application designed to streamline library operations. It manages physical book
+inventories, e-book licenses, user memberships, and the complex lending lifecycle. The
+primary goal is to digitize manual processes and improve the experience for both
+patrons and administrative staff.
+2.0 Functional Requirements
+2.1 REQ-001: The SLMS shall allow an authenticated Librarian actor to add, update,
+archive, and delete book records from the main database.
+2.2 REQ-002: Registered members must be able to search the catalog using multi-
+parameter filters including Title, Author, Genre, and Publication Year.
+2.3 REQ-003: The system should automatically generate and dispatch an email
+notification when a borrowed item is overdue. The notification must be processed very
+quickly to ensure the user is informed without delay.
+2.4 REQ-004: Members shall be permitted to place a hold on a physical book that is
+currently checked out by another user. This feature is strictly governed by the
+permission matrix detailed in section 4.0 and the inventory limits outlined in REQ-001.
+3.0 Non-Functional Requirements
+3.1 SEC-001 (Security): All user passwords and sensitive personally identifiable
+information (PII) must be encrypted using the AES-256 standard at rest.
+3.2 PERF-001 (Performance): The catalog search engine should return query results
+seamlessly and handle high traffic gracefully during peak hours.
+4.0 Role Authentication and Permissions
+5.0 Technical Constraints
+5.1 TECH-001: The backend architecture must be implemented using Python and rely on
+a PostgreSQL relational database.
+5.2 TECH-002: The frontend user interface shall be responsive and function perfectly on
+all modern devices and internet connections.

@@ -1,15 +1,17 @@
 import os
 import tempfile
+import time
+from typing import Any
 
 import streamlit as st
 from langchain_huggingface import HuggingFaceEmbeddings
 
+import document_processor as dp
 import prompts
-from document_processor import DocumentProcessor
 from rag_system import RagSystem
-from vector_database import VectorDatabase
 
 st.set_page_config(layout="wide", page_title="AI Requirements Chat", page_icon=":robot:")
+
 
 @st.cache_resource
 def get_embedding_function():
@@ -17,7 +19,9 @@ def get_embedding_function():
     if "HF_TOKEN" in st.secrets:
         os.environ["HF_TOKEN"] = st.secrets["HF_TOKEN"]
     else:
-        print("Warning: No Hugging Face token provided. Add HF_TOKEN=\"hf_key\" to the secrets.toml to remove the warning.")
+        print(
+            "Warning: No Hugging Face token provided. Add HF_TOKEN=\"hf_key\" to the secrets.toml to remove the "
+            "warning.")
 
     return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
@@ -25,9 +29,10 @@ def get_embedding_function():
 @st.dialog("How to Use the AI Requirements Analyst")
 def info_modal():
     st.markdown("""
-    ### 📘 How to Use the AI Requirements Analyst
+### 📘 How to Use the AI Requirements Analyst
 
-Welcome to your local, AI-powered document analysis platform. This tool acts as an expert software architect, allowing you to instantly search, analyze, and query your project specifications. 
+Welcome to your local, AI-powered document analysis platform. This tool acts as an expert software architect, 
+allowing you to instantly search, analyze, and query your project specifications. 
 
 Here is how to get the most out of the platform:
 
@@ -38,20 +43,46 @@ To begin, upload your project files using the **attachment icon** inside the cha
 * The system will automatically read, chunk, and index your documents into a secure local database.
 
 #### 2. 💬 Ask Highly Specific Questions
-Once your files are uploaded, ask questions exactly as you would to a lead engineer. The AI will scan across all uploaded documents to find the answer.
+Once your files are uploaded, ask questions exactly as you would to a lead engineer. The AI will scan across all 
+uploaded documents to find the answer.
 * *Example:* "What does the frontend document say about login timeouts?"
 * *Example:* "Are there any contradictions between the API spec and the UI guidelines regarding user roles?"
 * *Example:* "Summarize the data migration steps into a bulleted list."
 
 #### 3. ⚙️ How the AI Operates (System Rules)
 To ensure absolute accuracy, this AI is bound by strict analytical rules:
-* **Zero Hallucination:** The AI will *only* answer based on the documents provided. If the information is missing, it will directly tell you it cannot be found. It will not guess or invent features.
-* **Source Citations:** When the AI provides an answer, it will cite the exact document and page number it pulled the information from (e.g., `[Source: SRS_Frontend.pdf | Page: 4]`).
+* **Zero Hallucination:** The AI will *only* answer based on the documents provided. If the information is missing, 
+it will directly tell you it cannot be found. It will not guess or invent features.
+* **Source Citations:** When the AI provides an answer, it will cite the exact document and page number it pulled the 
+information from (e.g., `[Source: SRS_Frontend.pdf | Page: 4]`).
 * **Language Matching:** The AI will always respond in the exact same language you used to ask the question. 
 *** 
 
 **Ready? Close this window, upload your first document, and say hello!**
 """)
+
+
+def add_messages(role: str, content: str, command: str | None = None, metadata: dict[str, Any] | None = None) -> None:
+    message = {"role": role, "command": command, "content": content}
+
+    if metadata is not None:
+        message.update({"metadata": metadata})
+
+    st.session_state.messages.append(message)
+
+
+def show_welcome_msg() -> None:
+    message = """
+    ## Welcome! I am ready to help you analyze your project documentation.
+    **Get started:**
+    1. Click the `+` (attachment) icon below to upload your files.
+    2. Wait a moment for the system to process the documents.
+    3. Ask me any question, like: 'What does the frontend document say about login timeouts?'
+
+    What would you like to analyze today?"""
+
+    add_messages('assistant', message)
+
 
 # initialize session variables
 if "documents" not in st.session_state:
@@ -60,56 +91,118 @@ if "documents" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-
 if "embedding_function" not in st.session_state:
     st.session_state.embedding_function = get_embedding_function()
 
-if "db" not in st.session_state:
-    st.session_state.db = VectorDatabase(st.session_state.embedding_function)
-
 if "rag" not in st.session_state:
+    show_welcome_msg()
+
+    # deletes Chroma DB if it exists from previous
+    chroma_db_path = st.secrets["CHROMA_DIR"] or "chroma_db"
+
     st.session_state.rag = RagSystem(st.session_state.embedding_function)
 
+if "db" not in st.session_state:
+    st.session_state.db = st.session_state.rag.vector_database
+    st.session_state.db.collection.reset_collection()
 
-def add_messages(role: str, content: str):
-    st.session_state.messages.append({"role": role, "content": content})
 
-def add_document(document: str):
-    print(document)
-    st.session_state.documents.append(document)
+def add_document(document: str, file_path: str) -> None:
+    st.session_state.documents.append({'source': document, 'isActive': True})
+    st.session_state.db.add_documents(file_path, document)
 
-def delete_document(index: int):
-    st.session_state.documents.pop(index)
+
+def modify_document_state(index: int, checkbox_key: str) -> None:
+    current_state = st.session_state.get(checkbox_key, st.session_state.documents[index].get('isActive', True))
+    st.session_state.documents[index]['isActive'] = current_state
+
+
+def delete_document(index: int) -> None:
+    source = st.session_state.documents.pop(index)['source']
+    st.session_state.db.delete_documents(source)
+
+
+def show_mermaid_diagram(code: str) -> None:
+    st.mermaid_chart(code)
+
+    with st.expander("View Mermaid Code"):
+        st.code(code, language="Mermaid")
+
+
+def show_chat(message: dict[str, Any]):
+    command = message.get("command", None)
+    content = message["content"]
+
+    if command == "diagram":
+        show_mermaid_diagram(content)
+    elif command == "success":
+        st.success(content)
+    else:
+        st.markdown(content)
+
+    metadata = message.get("metadata", None)
+    if metadata is not None:
+        st.html(f'''
+        <style>
+            .response-metadata {{
+                font-size: 0.8rem;
+                display: flex;
+                flex-direction: row-reverse;
+                width: 100%;
+            }}
+            
+            .response-metadata > p {{
+                font-size: inherit;
+            }}
+        </style>
+        <div class="response-metadata">
+            <p>Response given in <strong>{metadata["total_time"]}s</strong>, using <strong>
+{metadata["model_name"]}</strong>. Token Usage: {metadata["input_tokens"]} (prompt) + {metadata["output_tokens"]} (
+response) = <strong>{metadata["total_tokens"]}</strong> tokens.</p> 
+        </div>''')
+
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        show_chat(message)
 
 # Chat logic (prompts and documents)
-if user_submition := st.chat_input(
+if user_submission := st.chat_input(
         placeholder="What is up?",
         accept_file="multiple",
-        file_type=["csv", "pdf", "doc", "docx"],
+        file_type=["txt", "pdf", "docx"],
         submit_mode="disable"
 ):
-    prompt = user_submition.text
-    files = user_submition.files
+    prompt = (user_submission.text or "").strip()
+    files = user_submission.files
 
     if files:
-        for file in files:
-            name = file.name
+        with st.chat_message("assistant"):
+            label = "Loading the " + ("documents" if len(files) > 1 else "document")
+            with st.spinner(label, show_time=True):
+                for file in files:
+                    # start the timer for every document loading
+                    start_time = time.time()
 
-            with tempfile.NamedTemporaryFile(delete=False,
-                                             suffix="." + DocumentProcessor.check_file_extension(name)) as temp_file:
-                temp_file.write(file.read())
+                    name = file.name
+                    with tempfile.NamedTemporaryFile(delete=False,
+                                                     suffix="." + dp.check_file_extension(name)) as temp_file:
+                        temp_file.write(file.read())
 
-                file_path = temp_file.name
+                        file_path = temp_file.name
 
-            add_document(name)
+                    add_document(name, file_path)
 
-            st.session_state.db.add_documents(file_path)
+                    os.remove(file_path)
 
-            os.remove(file_path)
+                    # stop the timer for every document loaded
+                    stop_time = time.time()
+                    # get elapsed time and round it to 2 decimal places
+                    elapsed_time = round(stop_time - start_time, 2)
+
+                    content = f"**{name}** was loaded in **{elapsed_time}s**."
+                    add_messages("assistant", content, "success")
+                    st.success(content)
 
     if prompt:
         add_messages("user", prompt)
@@ -117,18 +210,63 @@ if user_submition := st.chat_input(
             st.markdown(prompt)
 
         with st.chat_message("assistant"):
-            command, prompt = prompts.retrieve_command(prompt)
+            with st.spinner("Wait for AI to respond...", show_time=True):
+                start_time = time.time()
+                command, prompt = prompts.retrieve_command(prompt)
 
-            complementary_system_prompt = prompts.get_specific_system_prompt(command)
-
-            response = st.session_state.rag.get_response(complementary_system_prompt, prompt)
-            response = response.content
-
-            st.markdown(response)
-
-        add_messages("assistant", response)
+                complementary_system_prompt = prompts.get_specific_system_prompt(command)
 
 
+                active_documents = []
+                inactive_documents = []
+
+                for document in st.session_state.documents:
+                    if document['isActive']:
+                        active_documents.append(document['source'])
+                    else:
+                        inactive_documents.append(document['source'])
+
+
+
+                search_kwargs = None
+
+                props_deleted = 0
+                if len(active_documents) != 0:
+                    search_kwargs = {
+                        'filter': {
+                            'source': {
+                                '$in': active_documents,
+                            }
+                        }
+                    }
+                elif len(inactive_documents) != 0:
+                        search_kwargs = {
+                            'filter': {
+                                'source': {
+                                    '$nin': inactive_documents,
+                                }
+                            }
+                        }
+
+                response = st.session_state.rag.get_response(complementary_system_prompt, prompt, search_kwargs)
+                stop_time = time.time()
+                elapsed_time = round(stop_time - start_time, 2)
+                response_content = response["content"]
+                # print(response)
+                response_metadata = {**response["usage_metadata"],
+                                     "model_name": response["response_metadata"]["model_name"],
+                                     "total_time": elapsed_time}
+
+            show_chat({
+                "role": "assistant",
+                "command": command,
+                "content": response_content,
+                "metadata": response_metadata
+            })
+
+        add_messages("assistant", response_content, command, response_metadata)
+
+    st.rerun()
 
 with st.sidebar:
     st.header("AI Model for Analysing Software Requirement")
@@ -136,18 +274,26 @@ with st.sidebar:
     st.markdown("Documents from the current session:")
 
     for index, document in enumerate(st.session_state.documents):
-        print(index, document)
+        # print(index, document)
         col1, col2 = st.columns([0.8, 0.2])
 
         with col1:
-            st.markdown(f"**{document}**")
+            checkbox_key = f"document_checkbox_{index}"
+            st.checkbox(
+                label=f"**{document['source']}**",
+                value=document['isActive'],
+                key=checkbox_key,
+                on_change=modify_document_state,
+                args=[index, checkbox_key]
+            )
 
         with col2:
             st.button(
                 label="",
                 icon=":material/delete:",
                 on_click=delete_document,
-                args=[index]
+                args=[index],
+                key=f"btn_{index}"
             )
 
     with st.container(key="user-guide"):
@@ -168,14 +314,3 @@ with st.sidebar:
         
     </style>
     """)
-
-
-if len(st.session_state.messages) == 0:
-    st.header("Welcome! I am ready to help you analyze your project documentation.")
-    st.markdown("""
-**Get started:**
-1. Click the `+` (attachment) icon below to upload your files.
-2. Wait a moment for the system to process the documents.
-3. Ask me any question, like: 'What does the frontend document say about login timeouts?'
-
-What would you like to analyze today?""")

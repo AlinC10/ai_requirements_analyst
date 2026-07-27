@@ -9,8 +9,7 @@ from pymupdf4llm.ocr import rapidocr_api
 
 from doc_splitter import DocSplitter
 
-default_important_metadata_categories: list[str] = ['title', 'author', 'subject', 'keywords', 'source',
-                                                    'file_path']
+default_important_metadata_categories: list[str] = ['title', 'author', 'subject', 'keywords', 'source']
 page_break_delimiter = "\n---PAGE BREAK---\n"
 
 
@@ -71,10 +70,11 @@ def _add_document_metadata(docs: list[Document], chat_id: str, extension: str):
 
             doc.metadata['page'] = page_number
 
+    print(docs[0].metadata)
     return docs
 
 
-def load_doc(file_path: str, chat_id: str, file_name: str | None = None,
+def load_doc(file_path: str, chat_id: str, file_name: str,
              important_metadata_categories: list[str] | None = None) -> list[Document]:
     if important_metadata_categories is None:
         important_metadata_categories = default_important_metadata_categories
@@ -84,12 +84,12 @@ def load_doc(file_path: str, chat_id: str, file_name: str | None = None,
 
     docs = None
     if extension in 'docx':
-        docs = _load_docx(file_path, chat_id)
+        docs = _load_docx(file_path, file_name, chat_id)
     elif extension == "pdf":
-        docs = _load_pdf(file_path, chat_id)
+        docs = _load_pdf(file_path, file_name, chat_id)
         docs = _remove_useless_info_from_metadata(docs, important_metadata_categories)
     else:
-        docs = _load_txt(file_path, chat_id)
+        docs = _load_txt(file_path, file_name, chat_id)
 
     split_docs = split_doc(docs, extension)
 
@@ -116,7 +116,9 @@ def extract_file_title(file_path: str, text: str = "", meta_title: str | None = 
     # search for "# " which is used for titles in Markdown format
     for line in text.splitlines():
         line = line.strip()
+        print('1 ' + line)
         if line.startswith('# '):
+            print("2 " + line)
             return line[2:].strip(" *")
 
     # create the title from file path, removing "_" and "-" symbols
@@ -127,7 +129,7 @@ def extract_file_title(file_path: str, text: str = "", meta_title: str | None = 
     return clean_name
 
 
-def _load_docx(file_path: str, chat_id: str) -> Document:
+def _load_docx(file_path: str, file_name: str, chat_id: str) -> Document:
     """Load the .docx file using MarkItDown library."""
 
     md = MarkItDown()
@@ -137,10 +139,20 @@ def _load_docx(file_path: str, chat_id: str) -> Document:
     doc = docx.Document(file_path)
     props = doc.core_properties
 
+    # extract the text of the first paragraph styled as a 'Title' from .docx to retrieve the document title
+    title = None
+    try:
+        for para in doc.paragraphs[:5]:
+            if para.style.name.startswith("Title") and para.text.strip():
+                title = para.text.strip()
+                break
+    except Exception:
+        pass
+
     metadata = {"author": props.author or "Unknown",
-                "title": extract_file_title(file_path, document, props.title),
+                "title": title or extract_file_title(file_name, document, props.title),
                 "category": props.category or "Unknown",
-                "source": file_path,
+                "source": file_name,
                 "chat_id": chat_id
                 }
 
@@ -150,7 +162,7 @@ def _load_docx(file_path: str, chat_id: str) -> Document:
     )
 
 
-def _load_txt(file_path: str, chat_id: str) -> Document:
+def _load_txt(file_path: str, file_name: str, chat_id: str) -> Document:
     """Load the .txt file.
     If Python encounters a corrupted or weird character that isn't valid UTF-8, instead of crashing the entire
     script with a UnicodeDecodeError, it simply replaces the bad character with a standard placeholder symbol (
@@ -159,10 +171,10 @@ def _load_txt(file_path: str, chat_id: str) -> Document:
     with open(file_path, mode="r", encoding="utf-8", errors="replace") as file:
         txt = file.read()
         return Document(page_content=txt,
-                        metadata={"source": file_path, "title": extract_file_title(file_path), "chat_id": chat_id})
+                        metadata={"source": file_name, "title": extract_file_title(file_name), "chat_id": chat_id})
 
 
-def _load_pdf(file_path: str, chat_id: str) -> Document:
+def _load_pdf(file_path: str, file_name: str, chat_id: str) -> Document:
     """Load the PDF file into the RAM using PyMuPDF4LLMLoader with
     RapidOCR for retrieving text from images."""
     loader = PyMuPDF4LLMLoader(
@@ -180,7 +192,10 @@ def _load_pdf(file_path: str, chat_id: str) -> Document:
     )
 
     document = loader.load()[0]
-    document.metadata.update({"chat_id": chat_id})
+    document.metadata.update({"chat_id": chat_id, "source": file_name})
+
+    title = extract_file_title(file_path, file_name, document.metadata.get('title', None))
+    document.metadata.update({'title': title})
 
     return document
 

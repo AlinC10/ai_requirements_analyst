@@ -6,7 +6,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_core.vectorstores import VectorStoreRetriever
 from streamlit import secrets
 
-from document_processor import DocumentProcessor
+import document_processor as dp
 
 
 class VectorDatabase:
@@ -15,7 +15,6 @@ class VectorDatabase:
         self._persistent_directory = secrets["CHROMA_DIR"] or "./chroma_db"
         self._embeddings_function = embedding_function
         self.collection = self.get_or_create_collection()
-        self.dp = DocumentProcessor()
 
     def get_or_create_collection(self, collection_name: str = "collection") -> Chroma:
         collection = Chroma(
@@ -25,10 +24,13 @@ class VectorDatabase:
         )
         return collection
 
-    def add_documents(self, docs_file_path: str, file_name: str | None = None) -> None:
+    def add_documents(self, docs_file_path: str, file_name: str) -> None:
         conversation_id = f"chat_{int(time.time())}"
-        docs = self.dp.load_doc(docs_file_path, conversation_id, file_name)
+        docs = dp.load_doc(docs_file_path, conversation_id, file_name)
         self.collection.add_documents(docs)
+
+    def delete_documents(self, source: str) -> None:
+        self.collection.delete(where={"source": source})
 
     def get_retriever(self, search_kwargs: dict | None = None, k: int = 5) -> VectorStoreRetriever:
         """
