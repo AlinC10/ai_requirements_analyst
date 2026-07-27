@@ -49,16 +49,6 @@ This project is a Streamlit application that uses a Retrieval-Augmented Generati
 This project is under active development. Here are some of the features and improvements planned for the future:
 
 ### High Priority
--   **Loading Indicator:** Add a loading indicator to show that a document is being processed.
--   **Command-Based Actions:** Implement slash commands in the chat to perform specific actions:
-    -   `/classify [topic]`: Classify functional vs. non-functional requirements.
-    -   `/defects [topic]`: Audit for ambiguities and contradictions.
-    -   `/stories [topic]`: Generate Agile User Stories.
-    -   `/usecases [topic]`: Generate detailed Use Cases.
-    -   `/criteria [topic]`: Generate BDD Acceptance Criteria.
-    -   `/diagram [topic]`: Generate a Mermaid diagram.
--   **Token Usage Display:** Show the number of tokens used for each response.
+-   **Local LLM:** Add local mode for important documents.
 -   **Code Refactoring:** Add comments and refactor `app.py` for better maintainability.
--   **Remove Debug Prints:** Remove all `print()` statements used for debugging.
--   **Database Sync:** Delete documents from the ChromaDB collection when they are removed from the UI.
 -   **Conversation History:** Add a feature to save and continue past conversations.
