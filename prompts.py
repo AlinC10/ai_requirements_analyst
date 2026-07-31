@@ -2,7 +2,14 @@ from langchain_core.prompts import ChatPromptTemplate
 
 
 def get_prompt_template(system_prompt: str) -> ChatPromptTemplate:
-    """Create a ChatPromptTemplate that can be used for every mode."""
+    """
+    Create a ChatPromptTemplate that can be used for every mode.
+
+    :param system_prompt: Instructions for the system to give a better answer.
+    :type system_prompt: str
+    :return: Template that will be used by a LangChain Expression Language(LCEL) chain.
+    :rtype: ChatPromptTemplate
+    """
 
     chat_template = ChatPromptTemplate.from_messages([
         ('system', system_prompt),
@@ -17,8 +24,13 @@ Retrieved Context:
 
 
 def retrieve_command(prompt: str) -> list[str]:
-    """Retrieve the command used based on the prompt given and return the
-    command and the prompt without the command.
+    """
+    Retrieve the command used based on the prompt given and return the command and the prompt without the command.
+
+    :param prompt: User message that will be sent to the LLM to get a response.
+    :type prompt: str
+    :return: Command extracted from the prompt and the prompt without the command.
+    :rtype: list[str]
     """
 
     prompt = prompt.strip()
@@ -35,8 +47,15 @@ def retrieve_command(prompt: str) -> list[str]:
 
 
 def get_specific_system_prompt(command: str) -> str:
-    """Create System Prompts specific for different task that will be concatenated
-    with the main System Prompt that should apply to all the system.
+    """
+    Create System Prompts specific for different task that will be concatenated with the main System Prompt that
+    should apply to all the system.
+
+    :param command: Command used when giving the prompt to retrieve the complementary system prompt.
+    :type command: str
+    :return: Specific system prompt that will be concatenated with the system prompt from RAGSystem class to formate
+    instructions that will achieve better results depending on the user intentions.
+    :rtype: str
     """
 
     template_text = """You are an Expert Agile Product Owner and Systems Designer.

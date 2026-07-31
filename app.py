@@ -1,8 +1,11 @@
 import os
+import shutil
+import subprocess
 import tempfile
 import time
 from typing import Any
 
+import ollama
 import streamlit as st
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -106,6 +109,9 @@ if "db" not in st.session_state:
     st.session_state.db = st.session_state.rag.vector_database
     st.session_state.db.collection.reset_collection()
 
+if "llm_mode" not in st.session_state:
+    st.session_state.llm_mode = "Cloud" # Initialize with a default value
+
 
 def add_document(document: str, file_path: str) -> None:
     st.session_state.documents.append({'source': document, 'isActive': True})
@@ -143,18 +149,6 @@ def show_chat(message: dict[str, Any]):
     metadata = message.get("metadata", None)
     if metadata is not None:
         st.html(f'''
-        <style>
-            .response-metadata {{
-                font-size: 0.8rem;
-                display: flex;
-                flex-direction: row-reverse;
-                width: 100%;
-            }}
-            
-            .response-metadata > p {{
-                font-size: inherit;
-            }}
-        </style>
         <div class="response-metadata">
             <p>Response given in <strong>{metadata["total_time"]}s</strong>, using <strong>
 {metadata["model_name"]}</strong>. Token Usage: {metadata["input_tokens"]} (prompt) + {metadata["output_tokens"]} (
@@ -216,7 +210,6 @@ if user_submission := st.chat_input(
 
                 complementary_system_prompt = prompts.get_specific_system_prompt(command)
 
-
                 active_documents = []
                 inactive_documents = []
 
@@ -225,8 +218,6 @@ if user_submission := st.chat_input(
                         active_documents.append(document['source'])
                     else:
                         inactive_documents.append(document['source'])
-
-
 
                 search_kwargs = None
 
@@ -240,13 +231,13 @@ if user_submission := st.chat_input(
                         }
                     }
                 elif len(inactive_documents) != 0:
-                        search_kwargs = {
-                            'filter': {
-                                'source': {
-                                    '$nin': inactive_documents,
-                                }
+                    search_kwargs = {
+                        'filter': {
+                            'source': {
+                                '$nin': inactive_documents,
                             }
                         }
+                    }
 
                 response = st.session_state.rag.get_response(complementary_system_prompt, prompt, search_kwargs)
                 stop_time = time.time()
@@ -268,7 +259,104 @@ if user_submission := st.chat_input(
 
     st.rerun()
 
+
+@st.dialog("Local LLM Error")
+def ollama_error(msg: str):
+    st.markdown(msg)
+    st.markdown("""\nYou'll be automatically moved to Cloud mode.""")
+
+
+@st.dialog("Cloud LLM Error")
+def groq_error():
+    st.markdown(
+        """Add a valid Groq API key to \".streamlit/secrets.toml\", like in the example provide in the 
+        \".streamlit/secrets.toml.example\"""")
+
+
+def force_change_llm(mode: str = "Cloud"):
+    """Function to change the LLM mode to Cloud in case of errors in changing to Local mode.
+    This can happen when Ollama is not installed on the user PC or if it can't be launched.
+    """
+    st.session_state.llm_mode = mode
+    st.rerun()
+
+def free_ram():
+    """Kill the Ollama local model to free up RAM."""
+
+    try:
+        ollama.generate(model=st.session_state.rag.llm_model, keep_alive=0)
+    except Exception:
+        return
+
+def change_llm():
+    current_option = st.session_state.get("select", "Cloud")
+
+    if st.session_state.llm_mode != current_option:
+        if current_option == "Cloud":
+            try:
+                with st.spinner("Changing LLM to Cloud..."):
+                    free_ram()
+                    st.session_state.rag.change_llm(False)
+            except Exception:
+                groq_error()
+                force_change_llm("Local")
+
+        elif current_option == "Local":
+            if shutil.which("ollama") is None:
+                ollama_error(
+                    """For Local LLM mode you need to install **Ollama**. If you want to install Ollama, [click here.]
+                    (https://ollama.com/)""")
+                force_change_llm()
+                return
+
+            try:
+                ollama.list()
+
+                with st.spinner("Changing LLM to Local..."):
+                    st.session_state.rag.change_llm(True)
+
+                try:
+                    st.toast(f"Success: Ollama is already running. Model used: {st.session_state.rag.llm_model}",
+                             icon="🎉", duration="infinite")
+                except Exception:
+                    ollama_error("**Error:** Available RAM is below 5GB and can't load any model.")
+
+            except Exception:
+                st.toast("Ollama service is offline. Starting it now...")
+
+                with st.spinner("Starting Ollama..."):
+                    subprocess.Popen(["ollama", "serve"],
+                                     stdout=subprocess.DEVNULL,
+                                     stdin=subprocess.DEVNULL
+                                     )
+
+                    time.sleep(2)
+
+                    try:
+                        ollama.list()
+                        st.session_state.rag.change_llm(True)
+                        st.toast(
+                            f"Success: Ollama was started successfully. Model used: {st.session_state.rag.llm_model}",
+                            icon="🎉")
+
+                    except Exception:
+                        ollama_error("**Error:** Tried to start Ollama, but it failed.")
+
+                        force_change_llm()
+                        return
+
+        st.session_state.llm_mode = current_option
+
+
 with st.sidebar:
+    st.selectbox(
+        label="What type of LLM do you want to use?",
+        options=("Cloud", "Local"),
+        key="select",
+        on_change=change_llm, # Call the function when the selectbox changes
+        index=0 if st.session_state.llm_mode == "Cloud" else 1 # Set initial selection
+    )
+
     st.header("AI Model for Analysing Software Requirement")
 
     st.markdown("Documents from the current session:")
@@ -300,17 +388,28 @@ with st.sidebar:
         if st.button("User Guide", icon=":material/info:"):
             info_modal()
 
-    st.html("""
-    <style>
-        div[data-testid="stSidebarUserContent"] {
-            height: 100%;
-        }
+# page styling
+st.html("""
+<style>
+    div[data-testid="stSidebarUserContent"] {
+        height: 100%;
+    }
+    
+    div.st-key-user-guide > div {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+    }
+    
+    .response-metadata {{
+        font-size: 0.8rem;
+        display: flex;
+        flex-direction: row-reverse;
+        width: 100%;
+    }}
         
-        div.st-key-user-guide > div {
-            position: absolute;
-            bottom: 20px;
-            right: 20px;
-        }
-        
-    </style>
-    """)
+    .response-metadata > p {{
+        font-size: inherit;
+    }}
+</style>
+""")
