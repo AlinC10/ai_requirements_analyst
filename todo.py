@@ -27,3 +27,7 @@
 
 # TODO: add conversations history so that users can select past conversation
 #  and continue the discussion from where they left
+
+# TODO: improved error handling. enhance error messages and provide more guidance to the user.
+# TODO: add more feedback to the user for the moment when Ollama downloads a new model, such as a progress bar or
+#  more explicit status messages.
