@@ -8,5 +8,5 @@ readme.md
 chroma_db
 chromadb
 .venv
-pdf/Annex-A-Detailed-Software-Requirements-Specification-SRS.pdf
+test-docs/Annex-A-Detailed-Software-Requirements-Specification-SRS.pdf
 .streamlit/secrets.toml

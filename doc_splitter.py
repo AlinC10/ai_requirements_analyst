@@ -99,7 +99,7 @@ class DocSplitter:
         """
 
         content = document.page_content
-        metadata = document.metadatadocs
+        metadata = document.metadata
 
         if self.markdown_splitter is not None:
             docs = self.markdown_splitter.split_text(content)

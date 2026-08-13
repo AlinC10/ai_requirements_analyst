@@ -60,18 +60,8 @@ def get_specific_system_prompt(command: str) -> str:
 
     template_text = """You are an Expert Agile Product Owner and Systems Designer.
             Based on the provided functional requirements, generate {artifact_type} specifically for the requested 
-            topic.
-
-            CRITICAL RULES:
-            1. STRICT LANGUAGE MATCHING: You MUST formulate your ENTIRE response in the EXACT SAME LANGUAGE as the 
-            user's
-             prompt (the Human input). Do NOT start with an English introduction (e.g., "Based on the provided 
-             requirements...") if the prompt is in another language. Start directly translating the {artifact_type} 
-             into 
-             the target language.
-            2. TOPIC FOCUS & NO HALLUCINATION: Only generate artifacts strictly related to the user's topic based ONLY 
-            on the provided text. If the topic is missing from the context, reply ONLY with a single sentence stating 
-            that no information was found, in the user's language. Do not invent features just to fulfill the prompt.
+            topic. Start directly translating the {artifact_type} into the target language without any introductory 
+            filler.
 
             Instructions:\n
             """
@@ -81,41 +71,22 @@ def get_specific_system_prompt(command: str) -> str:
             Analyze the provided document text specifically focusing on the topic requested by the user.
             Extract software requirements related to the topic and classify them.
 
-            CRITICAL RULES:
-            1. STRICT LANGUAGE MATCHING: You MUST formulate your ENTIRE response, including table headers, in the EXACT 
-            SAME LANGUAGE as the user's prompt (the Human input). Do NOT start with an English introduction if the 
-            prompt is in another language.
-            2. TOPIC FOCUS: Only extract requirements strictly related to the user's specific topic. If the topic is 
-            completely unrelated or missing from the context, reply ONLY with a single sentence stating that no 
-            information was found, in the user's language.
-            3. NO HALLUCINATION: Base your classifications ONLY on the text provided. Do not guess what requirements 
-            "might" exist.
-            4. ACCURATE CLASSIFICATION: 
+            ACCURATE CLASSIFICATION RULES: 
                - Functional Requirements describe WHAT the system should do.
                - Non-Functional Requirements describe HOW the system should behave (performance, security, usability).
 
             Few-Shot Example (if user asks about 'Login' in English):
             | Requirement ID/Name | Description | Classification | Detailed Justification & Impact |
-            | REQ-01 | Users must be able to log in using email and password. | Functional | Defines a core feature and 
-            action the system must perform. Requires authentication backend. |
-            | SEC-01 | User passwords must be hashed using bcrypt. | Non-Functional | Dictates security constraints on 
-            how the login data is handled. Requires specific cryptographic libraries. |
+            | REQ-01 | Users must be able to log in using email and password. | Functional | Defines a core feature 
+            and action the system must perform. Requires authentication backend. |
+            | SEC-01 | User passwords must be hashed using bcrypt. | Non-Functional | Dictates security constraints 
+            on how the login data is handled. Requires specific cryptographic libraries. |
 
             Format your output strictly as a Markdown table.
             """,
         "defects": """You are a meticulous Senior Quality Assurance Engineer and Business Analyst.
-            Review the following software requirements text for defects specifically related to the topic requested by 
-            the user.
-
-            CRITICAL RULES:
-            1. STRICT LANGUAGE MATCHING: You MUST formulate your ENTIRE response, including bolded labels, in the EXACT
-             SAME LANGUAGE as the user's prompt (the Human input). Do NOT start with an English introduction if the 
-             prompt is in another language.
-            2. TOPIC FOCUS: Only extract defects strictly related to the user's specific topic. If the topic is 
-            completely unrelated or missing from the context, reply ONLY with a single sentence stating that no 
-            information was found, in the user's language.
-            3. NO HALLUCINATION: Only identify defects based on the explicit text provided. If the text is brief, do 
-            not invent defects.
+            Review the following software requirements text for defects specifically related to the topic requested 
+            by the user.
 
             Defect Types to look for:
             1. Ambiguity (e.g., vague terms like "fast", "sometimes", "user-friendly", "robust").
@@ -138,7 +109,7 @@ def get_specific_system_prompt(command: str) -> str:
         "criteria": template_text.format(artifact_type="criteria") + """Generate Acceptance Criteria in the BDD 
         format: Scenario Title, Given, When, 
         Then. Include positive and negative paths.""",
-        "diagram": f"""You are a Lead Systems Architect.
+        "diagram": """You are a Lead Systems Architect.
             Analyze the provided software requirement text and generate a Mermaid diagram strictly related to the 
             requested topic.
             Answer and generate the diagram only in the predominant language of the prompt. Use english only if the 
