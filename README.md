@@ -6,7 +6,7 @@ This project is a Streamlit application that uses a Retrieval-Augmented Generati
 
 *   **Document Upload:** Supports `.pdf`, `.docx`, and `.txt` files.
 *   **Dual LLM Modes:**
-    *   **Cloud Mode:** Utilizes Groq's powerful `llama-3.3-70b-versatile` for high-performance analysis, with an automatic fallback to `llama-3.1-8b-instant`.
+    *   **Cloud Mode:** Utilizes Groq's powerful `openai/gpt-oss-120b` for high-performance analysis, with an automatic fallback to `openai/gpt-oss-20b`.
     *   **Local Mode:** Run analysis entirely on your local machine using Ollama for enhanced privacy and offline capability.
 *   **AI-Powered Q&A:** Ask questions about your documents and get answers based on their content.
 *   **OCR for Images:** Extracts text from images within PDF documents.
