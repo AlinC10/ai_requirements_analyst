@@ -115,8 +115,8 @@ def create_prompt_llm(is_local: bool = False, max_tokens: int = 3000, temperatur
         raise ValueError("max tokens parameter cannot be negative")
 
     if not is_local:
-        main_model = "llama-3.3-70b-versatile"
-        fallback_model = "llama-3.1-8b-instant"
+        main_model = "openai/gpt-oss-120b"
+        fallback_model = "openai/gpt-oss-20b"
 
         main_llm = get_llm(main_model, temperature, max_tokens)
         fallback_llm = get_llm(fallback_model, temperature, max_tokens)
