@@ -17,7 +17,7 @@ This project is a Streamlit application that uses a Retrieval-Augmented Generati
 *   **Language:** Python
 *   **Framework:** LangChain
 *   **LLM Providers:**
-    *   **Cloud:** Groq (using `llama-3.3-70b-versatile` and `llama-3.1-8b-instant`)
+    *   **Cloud:** Groq (using `openai/gpt-oss-120b` and `openai/gpt-oss-20b`)
     *   **Local:** Ollama
 *   **Vector Database:** ChromaDB
 *   **Frontend UI:** Streamlit
